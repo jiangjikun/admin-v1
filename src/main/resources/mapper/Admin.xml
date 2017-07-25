@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spiderdt.admin.dao.AdminDao">
+
+    <!--查询表信息-->
+    <select id="queryInfo" resultType="hashmap">
+        select * from conf.scheduler_${table}_info
+    </select>
+
+    <select id="queryHistoryInfo" resultType="hashmap">
+        SELECT * FROM conf.scheduler_job_history_info
+          WHERE job_id IN (
+            SELECT job_id
+          FROM (
+            SELECT DISTINCT job_id,
+            create_time
+         FROM conf.scheduler_job_history_info
+         ORDER BY job_id, create_time DESC
+         LIMIT 100) tmp)
+    </select>
+
+    <!--查询selector-->
+    <select id="querySelector" resultType="string">
+        SELECT DISTINCT ${selector} from conf.scheduler_source_meta_info
+    </select>
+
+    <!--暂时少一个列 m_driver_cores-->
+    <select id="queryResourcesDefault" resultType="hashmap">
+      select
+        f_driver_memory, f_driver_cores, f_executor_num, f_executor_cores, f_executor_memory, m_driver_memory, m_driver_cores, m_executor_num, m_executor_cores, m_executor_memory,
+        default_model_script, default_run_model_script, default_feature_retries, default_feature_script, default_run_feature_script, default_model_retries
+        from conf.scheduler_source_meta_info source LEFT JOIN conf.scheduler_resources_meta_info resources ON source.default_resource_type = resources.resource_type
+        WHERE source.default_project_name=#{project_name} and source.source_name=#{source_name} and source.default_job_type = #{job_type} and source.default_model_type = #{model_type}
+    </select>
+
+    <select id="queryFeatureDefault" resultType="hashmap">
+      select default_feature_name, default_feature_value FROM conf.scheduler_feature_meta_info WHERE job_type = #{job_type}
+    </select>
+
+    <select id="queryModelDefault" resultType="hashmap">
+      select default_model_name, default_model_value FROM conf.scheduler_model_meta_info WHERE model_type = #{model_type}
+    </select>
+
+    <!--删除表信息-->
+    <delete id="delete_data">
+        DELETE FROM conf.scheduler_${table}_info WHERE id IN
+        <foreach item="idList" collection="list" open="(" separator="," close=")">
+            ${idList}
+        </foreach>
+    </delete>
+
+    <!--增加表信息-->
+    <insert id="insert_feature_meta">
+        INSERT INTO conf.scheduler_feature_meta_info(job_type, default_feature_name, default_feature_value, create_time, modified_time, created_by, modified_by, status)
+         VALUES (#{job_type},#{default_feature_name},#{default_feature_value},#{create_time},#{modified_time},#{created_by},#{modified_by},#{status})
+    </insert>
+    <insert id="insert_job_configuration">
+        INSERT INTO conf.scheduler_job_configuration_info (project_name ,source_name ,job_type ,model_type ,var_name ,var_value ,create_time ,modified_time ,created_by ,modified_by ,status)
+         VALUES (#{project_name },#{source_name },#{job_type },#{model_type },#{var_name },#{var_value },#{create_time },#{modified_time },#{created_by},#{modified_by },#{status} )
+    </insert>
+    <!--<insert id="insert_job_history">-->
+    <!--INSERT INTO conf.scheduler_job_history_info  (job_id,project_name,source_id,source_name,job_type,model_type,var_name,var_value,create_time,modified_time,created_by,modified_by,status)-->
+    <!--VALUES (#{job_id},#{project_name},#{source_id},#{source_name},#{job_type},#{model_type},#{var_name},#{var_value},#{create_time},#{modified_time},#{created_by},#{modified_by},#{status})-->
+    <!--</insert>-->
+    <insert id="insert_project_meta">
+        INSERT INTO conf.scheduler_project_meta_info  (project_name, create_time, modified_time, created_by, modified_by, status)
+         VALUES (#{project_name},#{ create_time},#{ modified_time},#{ created_by},#{ modified_by},#{ status})
+    </insert>
+    <insert id="insert_model_meta">
+        INSERT INTO conf.scheduler_model_meta_info  (model_type, default_model_name, default_model_value, create_time, modified_time, created_by, modified_by, status)
+         VALUES (#{model_type},#{ default_model_name},#{ default_model_value},#{ create_time},#{ modified_time},#{ created_by},#{ modified_by},#{ status})
+    </insert>
+    <insert id="insert_resources_meta">
+        INSERT INTO conf.scheduler_resources_meta_info  (resource_type, f_driver_memory, f_driver_cores, f_executor_num, f_executor_cores, f_executor_memory, m_driver_memory, m_driver_cores, m_executor_num, m_executor_cores, m_executor_memory, create_time, modified_time, created_by, modified_by, status)
+         VALUES (#{resource_type },#{f_driver_memory },#{f_driver_cores },#{f_executor_num },#{f_executor_cores },#{f_executor_memory },#{m_driver_memory },#{m_driver_cores },#{m_executor_num },#{m_executor_cores },#{m_executor_memory },#{create_time },#{modified_time },#{created_by },#{modified_by },#{status })
+    </insert>
+    <insert id="insert_source_meta">
+        INSERT INTO conf.scheduler_source_meta_info  (source_name, default_model_type, default_model_script, default_run_model_script, default_feature_retries, default_job_type, default_feature_script, default_run_feature_script, default_model_retries, default_project_name, default_resource_type, create_time, modified_time, created_by, modified_by, status)
+         VALUES (#{source_name},#{ default_model_type},#{ default_model_script},#{ default_run_model_script},#{ default_feature_retries},#{ default_job_type},#{ default_feature_script},#{ default_run_feature_script},#{ default_model_retries},#{ default_project_name},#{ default_resource_type},#{ create_time},#{ modified_time},#{ created_by},#{ modified_by},#{ status})
+    </insert>
+
+    <!--更新数据-->
+    <update id="update_feature_meta">
+        UPDATE conf.scheduler_feature_meta_info SET job_type=#{job_type}, default_feature_name=#{default_feature_name},
+        default_feature_value=#{default_feature_value}, create_time=#{create_time}, modified_time=#{modified_time}, created_by=#{created_by}, modified_by=#{modified_by}, status=#{status}
+        WHERE id = #{id}
+    </update>
+
+    <update id="update_job_configuration">
+        UPDATE conf.scheduler_job_configuration_info SET
+            project_name=#{project_name}, source_name=#{source_name}, job_type=#{job_type}, model_type=#{model_type}, var_name=#{var_name}, var_value=#{var_value},
+            create_time=#{create_time}, modified_time=#{modified_time}, created_by=#{created_by}, modified_by=#{modified_by}, status=#{status}
+        WHERE id = #{id}
+    </update>
+
+    <update id="update_project_meta">
+        UPDATE conf.scheduler_project_meta_info SET
+            project_name=#{project_name},create_time=#{create_time},modified_time=#{modified_time},created_by=#{created_by},modified_by=#{modified_by},status=#{status}
+                WHERE id = #{id}
+    </update>
+
+    <update id="update_model_meta">
+        UPDATE conf.scheduler_model_meta_info SET
+            model_type=#{model_type},default_model_name=#{default_model_name},default_model_value=#{default_model_value},create_time=#{create_time},modified_time=#{modified_time},created_by=#{created_by},modified_by=#{modified_by},status=#{status}
+                WHERE id = #{id}
+    </update>
+
+    <update id="update_resources_meta">
+        UPDATE conf.scheduler_resources_meta_info SET
+            resource_type=#{resource_type}, f_driver_memory=#{f_driver_memory}, f_driver_cores=#{f_driver_cores}, f_executor_num=#{f_executor_num},
+            f_executor_cores=#{f_executor_cores}, f_executor_memory=#{f_executor_memory}, m_driver_memory=#{m_driver_memory}, m_driver_cores=#{m_driver_cores},
+             m_executor_num=#{m_executor_num}, m_executor_cores=#{m_executor_cores}, m_executor_memory=#{m_executor_memory}, create_time=#{create_time},
+             modified_time=#{modified_time}, created_by=#{created_by}, modified_by=#{modified_by}, status=#{status}
+                WHERE id = #{id}
+    </update>
+
+    <update id="update_source_meta">
+        UPDATE conf.scheduler_source_meta_info SET
+                source_name=#{source_name}, default_model_type=#{default_model_type}, default_model_script=#{default_model_script},
+                default_run_model_script=#{default_run_model_script}, default_feature_retries=#{default_feature_retries},
+                default_job_type=#{default_job_type}, default_feature_script=#{default_feature_script}, default_run_feature_script=#{default_run_feature_script},
+                default_model_retries=#{default_model_retries}, default_project_name=#{default_project_name}, default_resource_type=#{default_resource_type},
+                create_time=#{create_time}, modified_time=#{modified_time}, created_by=#{created_by}, modified_by=#{modified_by}, status=#{status}
+                WHERE id = #{id}
+    </update>
+
+</mapper>
